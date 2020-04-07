@@ -142,11 +142,7 @@ public class Converter {
 	}
 
 	private ZonedDateTime convertToZonedDateTime(String value) {
-		if(dateFormat.equals(DEFAULT_DATE_FORMAT)){ // FIXME reusing field for different purpose
-			dateFormat = DEFAULT_DATE_TIME_FORMAT;
-		}
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
-		return ZonedDateTime.parse(value,formatter);
+		return ZonedDateTime.parse(value);
 	}
 
 	private Long convertToLong(String value) {
