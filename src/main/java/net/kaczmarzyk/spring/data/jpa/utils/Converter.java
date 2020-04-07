@@ -20,6 +20,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -108,6 +109,8 @@ public class Converter {
 			return (T) convertToDouble(value);
 		} else if (expectedClass.isAssignableFrom(LocalDateTime.class)){
 			return (T) convertToLocalDateTime(value);
+		} else if (expectedClass.isAssignableFrom(ZonedDateTime.class)){
+			return (T) convertToZonedDateTime(value);
 		} else if (expectedClass.isAssignableFrom(LocalDate.class)) {
 			return (T) convertToLocalDate(value);
 		} else if (expectedClass.isAssignableFrom(BigDecimal.class)) {
@@ -136,6 +139,14 @@ public class Converter {
 		}
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
 		return LocalDateTime.parse(value,formatter);
+	}
+
+	private ZonedDateTime convertToZonedDateTime(String value) {
+		if(dateFormat.equals(DEFAULT_DATE_FORMAT)){ // FIXME reusing field for different purpose
+			dateFormat = DEFAULT_DATE_TIME_FORMAT;
+		}
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
+		return ZonedDateTime.parse(value,formatter);
 	}
 
 	private Long convertToLong(String value) {
