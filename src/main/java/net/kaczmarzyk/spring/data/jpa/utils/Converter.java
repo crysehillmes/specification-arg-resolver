@@ -18,6 +18,7 @@ package net.kaczmarzyk.spring.data.jpa.utils;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
@@ -37,61 +38,61 @@ import net.kaczmarzyk.spring.data.jpa.web.annotation.OnTypeMismatch;
 public class Converter {
 
 	public static class ValuesRejectedException extends IllegalArgumentException {
-		
+
 		private static final long serialVersionUID = 1L;
 
 		private Collection<String> rejectedValues;
-		
+
 		public ValuesRejectedException(Collection<String> rejectedValues, String message) {
 			super(message);
 			this.rejectedValues = rejectedValues;
 		}
-		
+
 		public Collection<String> getRejectedValues() {
 			return rejectedValues;
 		}
-		
+
 		@Override
 		public String toString() {
 			return this.getClass() + ": " + getMessage();
 		}
 	}
-	
+
 	public static class ValueRejectedException extends IllegalArgumentException {
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 		private String rejectedValue;
-		
+
 		public ValueRejectedException(String rejectedValue, String message) {
 			super(message);
 			this.rejectedValue = rejectedValue;
 		}
-		
+
 		public String getRejectedValue() {
 			return rejectedValue;
 		}
-		
+
 		@Override
 		public String toString() {
 			return this.getClass().getSimpleName() + ": " + getMessage();
 		}
 	}
-	
+
 	private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd";
 	private static final String DEFAULT_DATE_TIME_FORMAT = "yyyy-MM-dd\'T\'HH:mm:ss";
 
 	public static final Converter DEFAULT = Converter.withDateFormat(DEFAULT_DATE_FORMAT, OnTypeMismatch.EMPTY_RESULT);
-	
+
 	private String dateFormat;
 	private OnTypeMismatch onTypeMismatch;
-	
-	
+
+
 	private Converter(String dateFormat, OnTypeMismatch onTypeMismatch) {
 		this.dateFormat = dateFormat;
 		this.onTypeMismatch = onTypeMismatch;
 	}
-	
+
 	public <T> T convert(String value, Class<T> expectedClass) {
 		if (expectedClass.isEnum()) {
 			return (T) convertToEnum(value, (Class<? extends Enum<?>>) expectedClass);
@@ -107,6 +108,8 @@ public class Converter {
 			return (T) convertToFloat(value);
 		} else if (isAssignableFromAnyOf(expectedClass, double.class, Double.class)) {
 			return (T) convertToDouble(value);
+		} else if (expectedClass.isAssignableFrom(Instant.class)){
+			return (T) convertToInstant(value);
 		} else if (expectedClass.isAssignableFrom(LocalDateTime.class)){
 			return (T) convertToLocalDateTime(value);
 		} else if (expectedClass.isAssignableFrom(ZonedDateTime.class)){
@@ -118,7 +121,7 @@ public class Converter {
 		}
 		return (T) value;
 	}
-	
+
 	private boolean isAssignableFromAnyOf(Class<?> expectedClass, Class<?>... candidates) {
 		for (Class<?> candidate : candidates) {
 			if (expectedClass.isAssignableFrom(candidate)) {
@@ -131,6 +134,10 @@ public class Converter {
 	private LocalDate convertToLocalDate(String value) {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
 		return LocalDate.parse(value,formatter);
+	}
+
+	private Instant convertToInstant(String value) {
+		return Instant.parse(value);
 	}
 
 	private LocalDateTime convertToLocalDateTime(String value) {
