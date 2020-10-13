@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package net.kaczmarzyk.spring.data.jpa.web;
 
 import java.lang.annotation.Annotation;
+import java.util.Map;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +39,8 @@ public class WebRequestProcessingContext {
 	private final MethodParameter methodParameter;
 	private final NativeWebRequest webRequest;
 	private String pathPattern;
+
+	private Map<String, String> resolvedPathVariables;
 	
 	public WebRequestProcessingContext(MethodParameter methodParameter, NativeWebRequest webRequest) {
 		this.methodParameter = methodParameter;
@@ -61,7 +64,10 @@ public class WebRequestProcessingContext {
 	}
 
 	public String getPathVariableValue(String pathVariableName) {
-		String value = PathVariableResolver.forPathPatternAndActualPath(pathPattern(), actualWebPath()).resolveValue(pathVariableName);
+		if(resolvedPathVariables == null) {
+			resolvedPathVariables = PathVariableResolver.resolvePathVariables(pathPattern(), actualWebPath());
+		}
+		String value = resolvedPathVariables.get(pathVariableName);
 		if (value != null) {
 			return value;
 		} else {

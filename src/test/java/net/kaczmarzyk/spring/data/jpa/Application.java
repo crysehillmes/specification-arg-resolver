@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,28 +15,41 @@
  */
 package net.kaczmarzyk.spring.data.jpa;
 
-import java.util.List;
-
+import net.kaczmarzyk.spring.data.jpa.web.SpecificationArgumentResolver;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableMBeanExport;
+import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import net.kaczmarzyk.spring.data.jpa.web.SpecificationArgumentResolver;
+import java.util.List;
+
+import static org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE;
+import static org.springframework.jmx.support.RegistrationPolicy.IGNORE_EXISTING;
 
 /**
  * @author Tomasz Kaczmarzyk
  */
 @Configuration
-@ComponentScan(basePackages="net.kaczmarzyk")
+@ComponentScan(basePackages = "net.kaczmarzyk", excludeFilters = {
+		@ComponentScan.Filter(type = ASSIGNABLE_TYPE, value = { ApplicationWithConfiguredConversionService.class }),
+		@ComponentScan.Filter(type = ASSIGNABLE_TYPE, value = { ApplicationWithSARConfiguredWithApplicationContext.class })
+})
 @EnableJpaRepositories
 @EnableAutoConfiguration
+@EnableMBeanExport(registration = IGNORE_EXISTING)
 public class Application implements WebMvcConfigurer {
+	
+	@Autowired
+	AbstractApplicationContext applicationContext;
 
-    @Override
-    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
-        argumentResolvers.add(new SpecificationArgumentResolver());
-    }
+	@Override
+	public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
+		argumentResolvers.add(new SpecificationArgumentResolver(applicationContext));
+	}
+	
 }

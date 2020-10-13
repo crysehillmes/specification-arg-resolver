@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,6 +78,7 @@ public class DefaultValE2eTest extends E2eTestBase {
           .andExpect(status().isOk())
           .andExpect(jsonPath("$").isArray())
           .andExpect(jsonPath("$[?(@.firstName=='Moe')]").exists())
-          .andExpect(jsonPath("$[1]").doesNotExist());
+          .andExpect(jsonPath("$[?(@.firstName=='Minnie')]").exists())
+          .andExpect(jsonPath("$[2]").doesNotExist());
   }
 }

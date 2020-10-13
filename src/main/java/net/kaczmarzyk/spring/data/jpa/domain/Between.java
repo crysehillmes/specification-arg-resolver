@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import javax.persistence.criteria.Root;
 
 import net.kaczmarzyk.spring.data.jpa.utils.Converter;
 import net.kaczmarzyk.spring.data.jpa.utils.QueryContext;
+
+import java.util.Objects;
 
 /**
  * <p>Filters with {@code path between arg1 and arg2} where-clause.</p>
@@ -71,4 +73,28 @@ public class Between<T> extends PathSpecification<T> {
 		return criteriaBuilder.between(targetExpression, lowerBoundary, upperBoundary);
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		if (!super.equals(o)) return false;
+		Between<?> between = (Between<?>) o;
+		return Objects.equals(lowerBoundaryStr, between.lowerBoundaryStr) &&
+				Objects.equals(upperBoundaryStr, between.upperBoundaryStr) &&
+				Objects.equals(converter, between.converter);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(super.hashCode(), lowerBoundaryStr, upperBoundaryStr, converter);
+	}
+
+	@Override
+	public String toString() {
+		return "Between[" +
+				"lowerBoundaryStr='" + lowerBoundaryStr + '\'' +
+				", upperBoundaryStr='" + upperBoundaryStr + '\'' +
+				", converter=" + converter +
+				']';
+	}
 }

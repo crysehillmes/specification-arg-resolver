@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,15 @@ public class NotEqualIgnoreCaseTest extends NotEqualTest {
 
 		NotEqualIgnoreCase<Customer> notHomer = notEqualIgnoreCaseSpec("firstName", "HoMeR");
 		assertFilterMembers(notHomer, margeSimpson, joeQuimby);
+	}
+
+	@Test
+	public void filtersByEnumCaseInsensitive() {
+		NotEqualIgnoreCase<Customer> notMale = notEqualIgnoreCaseSpec("gender", "maLe");
+		assertFilterMembers(notMale, margeSimpson);
+
+		NotEqualIgnoreCase<Customer> notFemale = notEqualIgnoreCaseSpec("gender", "fEmALE");
+		assertFilterMembers(notFemale, homerSimpson);
 	}
 
 	private <T> NotEqualIgnoreCase<T> notEqualIgnoreCaseSpec(String path, Object expectedValue) {

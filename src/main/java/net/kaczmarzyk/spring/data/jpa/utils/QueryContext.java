@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,10 @@
  */
 package net.kaczmarzyk.spring.data.jpa.utils;
 
-import java.util.function.Supplier;
+import javax.persistence.criteria.Fetch;
+import javax.persistence.criteria.Join;
+import javax.persistence.criteria.Root;
+import java.util.function.Function;
 
 /**
  * Ugly way to share context between different specifications -- e.g. joins (see {@code JoinSpecificationResolver})
@@ -24,7 +27,12 @@ import java.util.function.Supplier;
  */
 public interface QueryContext {
 
-	Object getEvaluated(String key);
+	Join<?, ?> getEvaluated(String key, Root<?> root);
 	
-	void putLazyVal(String key, Supplier<Object> value);
+	void putLazyVal(String key, Function<Root<?>, Join<?, ?>> value);
+
+	Fetch<?, ?> getEvaluatedJoinFetch(String key);
+
+	void putEvaluatedJoinFetch(String key, Fetch<?, ?> fetch);
+
 }

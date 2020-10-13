@@ -26,6 +26,7 @@ You can also take a look on a working Spring Boot app that uses this library: ht
       * [Interface inheritance tree](#interface-inheritance-tree)
    * [Handling different field types](#handling-different-field-types) -- handling situations when provided parameter is of different type than the field (e.g. `"abc"` sent against an integer field)
    * [Path Variable support](#path-variable-support) -- using uri fragments (resolvable with Spring's `@PathVariable` annotation) in specifications
+   * [Type conversions for HTTP parameters](#type-conversions-for-http-parameters) -- information about supported type conversions (i.e. ability to convert HTTP parameters into Java types such as `LocalDateTime`, etc.) and the support of defining custom converters
    * [Compatibility notes](#compatibility-notes) -- information about older versions compatible with previous Spring Boot and Java versions
    * [Download binary releases](#download-binary-releases) -- Maven artifact locations
 
@@ -86,12 +87,30 @@ public class MyConfig implements WebMvcConfigurer {
 }
 ```
 
+The library converts HTTP parameters (strings) into most popular Java types such as dates, numbers, and enums. In case of a need for some additional conversion, please see how to configure specification argument resolver with If you need to use additional converters please see [custom converters section](#type-conversions-for-http-parameters).
+
 Simple specifications
 ----------------------
 
 Use `@Spec` annotation to automatically resolve a `Specification` argument of your controller method. `@Spec` has `path` property that should be used to specify property path of the attribute of an entity, e.g. `address.city`. By default it's also the name of the expected HTTP parameter, e.g. `GET http://myhost?address.city=Springfield`.
 
-Use `spec` attribute of the annotation to specify one of the following strategies for filtering.
+Use `spec` attribute of the annotation to specify one of the filtering strategies listed in the subsections below (e.g. Like, Equal, In)
+
+For multi value filters like: `In.class`, `NotIn.class` there are two ways of passing multiple arguments. The first way is passing the same HTTP parameter multiple times as follows: 
+
+    GET http://myhost/customers?gender=MALE&gender=FEMALE
+
+The second way is the use `paramSeparator` attribute of `@Spec`, which determines the argument separator.
+For example the following controller method:
+```java
+@RequestMapping(value = "/customers", params = "genderIn")
+@ResponseBody
+public Object findCustomersByGender(
+	@Spec(path = "gender", params = "genderIn", paramSeparator = ",", spec = In.class) Specification<Customer> spec) {
+	return customerRepo.findAll(spec);
+}
+```
+will handle `GET http://myhost/customers?gender=MALE,FEMALE` in exactly the same way as `GET http://myhost/customers?gender=MALE&gender=FEMALE` (as one parameter with two values `["MALE","GENDER"]`). Without specifying `paramSeparator` param `gender=MALE,FEMALE` will be processed as single value: `["MALE,FEMALE"]`.
 
 ### Like ###
 
@@ -125,7 +144,7 @@ A negation for this specification is also available: `NotEqual`.
 
 ### EqualIgnoreCase ###
 
-Works as `Equal`, but the query is also case-insensitive.
+Works as `Equal`, but the query is also case-insensitive, could be used for fields of type: `String`, `Enum`.
 
 A negation for this specification is also available: `NotEqualIgnoreCase`.
 
@@ -133,15 +152,19 @@ A negation for this specification is also available: `NotEqualIgnoreCase`.
 
 Compares an attribute of an entity with multiple values of a HTTP parameter. E.g. `(..) where gender in (MALE, FEMALE)`.
 
-HTTP request example:
-
-    GET http://myhost/customers?gender=MALE&gender=FEMALE
-
 Supports multiple data types: numbers, booleans, strings, dates, enums.
 
 Usage: `@Spec(path="gender", spec=In.class)`.
 
-The default date format used for temporal fields is `yyyy-MM-dd`. It can be overriden with a configuration parameter (see `LessThan` below).
+HTTP request example:
+
+    GET http://myhost/customers?gender=MALE&gender=FEMALE
+
+or if `paramSeparator` is specified (eg. `@Spec(path="gender", paramSeparator=',', spec=In.class)`):
+
+    GET http://myhost/customers?gender=MALE,FEMALE
+
+The default date format used for temporal fields is `yyyy-MM-dd`. It can be overridden with a configuration parameter (see `LessThan` below).
 
 A negation for this specification is also available: `NotIn`.
 
@@ -340,20 +363,82 @@ The default join type is `INNER`. You can use `type` attribute of the annotation
 
 Using `@Join` annotation makes the query distinct by default. While it is the best approach for most of the cases, you can override it by using `distinct` attribute of the annotation.
 
-You can specify multiple different joins with container annotaion `@Joins`, for example:
+You can specify multiple different joins, for example:
 
 ```java
 @RequestMapping("/customers")
 public Object findByOrderedOrFavouriteItem(
-        @Joins({
-            @Join(path = "orders", alias = "o")
-            @Join(path = "favourites", alias = "f")
-        })
+        @Join(path = "orders", alias = "o")
+        @Join(path = "favourites", alias = "f")
         @Or({
             @Spec(path="o.itemName", params="item", spec=Like.class),
             @Spec(path="f.itemName", params="item", spec=Like.class)}) Specification<Customer> customersByItem) {
 
     return customerRepo.findAll(customersByItem);
+}
+```
+
+Multi-level joins are supported. To create multi-level join you should specify multiple joins in which join path contains alias of another join with higher priority. 
+
+For example, let's assume the following entities:
+```java
+@Entity
+class Customer {
+
+    // other fields omitted for brevity
+
+    @OneToMany(mappedBy = "customer")
+    private Set<Order> orders;
+
+}
+
+@Entity
+class Order {
+
+    // other fields omitted for brevity
+
+    @ManyToOne
+    private Customer customer;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    private Set<ItemTag> tags;
+
+    ...
+}
+
+@Entity
+public class ItemTag {
+
+    // other fields omitted for brevity
+	private String name;
+    
+    ...
+}
+``` 
+
+If you want to find all customers who ordered item tagged as `#snacks`, you can do the following:
+```java
+@RequestMapping(value = "/findCustomersByOrderedItemTag")
+@PostMapping
+public Object findCustomersByOrderedItemTag(
+		@Join(path = "orders", alias = "o")
+		@Join(path = "o.tags", alias = "t")
+		@Spec(path = "t.name", params = "tag", spec = Equal.class) Specification<Customer> spec) {
+	return customerRepo.findAll(spec, Sort.by("id"));
+}
+```
+
+__Annotations are processed sequentially, the order must be kept!__
+
+Following spec is invalid:
+```java
+@RequestMapping(value = "/findCustomersByOrderedItemTag")
+@PostMapping
+public Object findCustomersByOrderedItemTag(
+		@Join(path = "o.tags", alias = "t") // "o" alias will be not exist during processing this @Join
+		@Join(path = "orders", alias = "o")
+		@Spec(path = "t.name", params = "tag", spec = Equal.class) Specification<Customer> spec) {
+	return customerRepo.findAll(spec, Sort.by("id"));
 }
 ```
 
@@ -374,15 +459,14 @@ public Object findByCityFetchOrdersAndAddresses(
 }
 ```
 
-The default join type is `LEFT`. You can use `joinType` attribute of the annotation to specify different value. You can specify multiple different joins with container annotation `@Joins`, for example:
+As with `@Join`, the use of `@JoinFetch` makes the query distinct by default.
+The default join type is `LEFT`. You can use `joinType` attribute of the annotation to specify different value. You can specify multiple different joins, for example:
 
 ```java
 @RequestMapping("/customers")
 public Object findByCityFetchOrdersAndAddresses(
-        @Joins(fetch = {
-            @JoinFetch(paths = "orders")
-            @JoinFetch(paths = "addresses", joinType = JoinType.INNER)
-        })
+        @JoinFetch(paths = "orders")
+        @JoinFetch(paths = "addresses", joinType = JoinType.INNER)
         @Spec(path="address.city", params="town", spec=Like.class) Specification<Customer> customersByCitySpec) {
 
     return customerRepo.findAll(customersByCitySpec);
@@ -391,6 +475,71 @@ public Object findByCityFetchOrdersAndAddresses(
 
 You can use join annotations with custom [annotated specification interfaces](#annotated-specification-interfaces).
 
+Multi-level fetch join is supported. To create multi-level fetch join you should specify multiple fetch joins in which join path contains alias of another fetch join with higher priority.
+
+For example, let's assume the following entities:
+```java
+@Entity
+class Customer {
+
+    // other fields omitted for brevity
+
+    @OneToMany(mappedBy = "customer")
+    private Set<Order> orders;
+
+}
+
+@Entity
+class Order {
+
+    // other fields omitted for brevity
+
+    @ManyToOne
+    private Customer customer;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    private Set<ItemTag> tags;
+
+    ...
+}
+
+@Entity
+public class ItemTag {
+
+    // other fields omitted for brevity
+	private String name;
+    
+    ...
+}
+``` 
+
+If you want to find all customers and fetch additional nested attributes (entities) to avoid `SELECT N+1 Problem` you can do the following:
+```java
+@RequestMapping(value = "/findCustomersByOrderedItemTag")
+@PostMapping
+public Object findCustomers(
+	    @JoinFetch(paths = "orders", alias = "o")
+	    @JoinFetch(paths = "o.tags") Specification<Customer> spec) {
+	return customerRepo.findAll(spec, Sort.by("id"));
+}
+```
+
+The same as in case of multi-level joins, annotations are processed sequentially, the order must be kept!
+
+__Join Fetch aliases exists only in context of join fetch and can't be used in another specs paths!__ 
+Following spec is invalid:
+
+```java
+@RequestMapping(value = "/findCustomersByOrderedItemTag")
+@PostMapping
+public Object findCustomersByOrderedItemTag(
+		@JoinFetch(path = "orders", alias = "o")
+		@Spec(path = "o.itemName", params = "itemName", spec = Equal.class) Specification<Customer> spec) {
+	return customerRepo.findAll(spec, Sort.by("id"));
+}
+```
+
+If there is a need to refer to joined paths in other specs, then regular join (not fetch) should be used as described in the Join section.
 
 Advanced HTTP parameter handling
 --------------------------------
@@ -423,7 +572,52 @@ If you don't want to bind your Specification to any HTTP parameter, you can use 
 @Spec(path="deleted", spec=Equal.class, constVal="false")
 ```
 
-will alwas produce the following: `where deleted = false`. It is often convenient to combine such a static part with dynamic ones using `@And` or `@Or` described below.
+will always produce the following: `where deleted = false`. It is often convenient to combine such a static part with dynamic ones using `@And` or `@Or` described below.
+
+Support for [SpEL](https://docs.spring.io/spring/docs/5.2.7.RELEASE/spring-framework-reference/core.html#expressions) expression and [property placeholders]((https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/context/support/PropertySourcesPlaceholderConfigurer.html)) in `constVal` could be enabled in following way:
+* Configure `SpecificationArgumentResolver` by passing [AbstractApplicationContext](https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/context/support/AbstractApplicationContext.html) in constructor
+* Set attribute `valueInSpEL` value to `true`
+  
+Configuration example:
+   ```java
+   @Autowired
+   AbstractApplicationContext applicationContext;
+    
+   @Override
+   public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
+   	argumentResolvers.add(new SpecificationArgumentResolver(applicationContext));
+   }
+   ```
+  
+
+Usage example #1:
+   ```java
+   @RequestMapping(value = "/customers")
+   @ResponseBody
+   public Object findCustomersBornInTheFuture(
+           @Spec(path = "birthDate", constVal = "#{T(java.time.LocalDate).now()}", valueInSpEL = true, spec = GreaterThanOrEqual.class) Specification<Customer> spec) {
+   	
+   	return customerRepo.findAll(spec);
+   }
+   ```
+
+Usage example #2:
+   ```java
+   @RequestMapping(value = "/customers")
+   @ResponseBody
+   public Object findCustomersWithTheLastNameSimpson(
+           @Spec(path = "lastName", constVal = "${search.default-params.lastName}", valueInSpEL = true, spec = Equal.class) Specification<Customer> spec) {
+   	
+   	return customerRepo.findAll(spec);
+   }
+   ```
+
+   application.properties
+   ```properties
+   search.default-params.lastName=Simpson
+   ```
+   
+Defined in `constVal` SpEL expression should be able to be evaluated to `java.lang.String`. 
 
 
 Default value of queries
@@ -445,6 +639,7 @@ Would handle request such as `GET /users` with the following query: `select u fr
 
 Supplying `constVal` implicitly sets `defaultVal` to empty.
 
+Support for [SpEL](https://docs.spring.io/spring/docs/5.2.7.RELEASE/spring-framework-reference/core.html#expressions) expression and [property placeholders]((https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/context/support/PropertySourcesPlaceholderConfigurer.html)) in `defaultVal` could be enabled in the same way as for [constVal](#static-parts-of-queries)
 
 Annotated specification interfaces
 ----------------------------------
@@ -559,6 +754,130 @@ Although in pure RESTful API this feature should not be needed, it sometimes mig
 
 This will handle request `GET /customers/Simpson` as `select c from Customers c where c.lastName = 'Simpson'`.
 
+Basic regular expressions are supported for path variable matching. All patterns supported by [Spring AntPathMatcher](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/util/AntPathMatcher.html) are supported. For example:
+
+```java
+@RequestMapping(value = "/pathVar/customers/{customerId:[0-9]+}")
+@ResponseBody
+public Object findById(
+  @Spec(path = "id", pathVars = "customerId", spec = Equal.class) Specification<Customer> spec) {
+
+  return customerRepo.findAll(spec);
+}
+```
+
+Type conversions for HTTP parameters
+-------------------
+
+Specification argument resolvers uses conversion mechanism to convert request string params to types of fields for which specifications have been defined.
+
+Let's consider the following code:
+  ```java
+	@Controller
+	public class SampleController {
+		
+		@Autowired
+		CustomerRepository customerRepository;
+		
+		@RequestMapping("/find")
+		public List<Customer> findByRegistrationDate(
+				@And({
+					@Spec(path = "name", params = "name", spec = Equal.class),
+					@Spec(path = "registrationDate", params = "registrationDate", spec = GreaterThanOrEqual.class)
+				}) Specification<Customer> spec) {
+			return customerRepository.findAll(spec);
+		}
+	}
+	
+	@Entity
+	public class Customer {
+		String name;
+		Date registrationDate;
+	}
+  ``` 
+When the following request will be sent to the endpoint presented above
+  ```
+  GET /find?name=John&registrationDate=2020-06-19
+  ```
+
+a `Specification<Customer>` based on fields `name` and `registrationDate` will be built.
+
+  * The type of the `name` field is a `String` type, received parameter value is always a `String` type so there is no need of conversion.  
+  * The type of the `registartionDate` field is `java.util.Date` type, so the `String` will be converted into `Date` using one of available converter.
+
+##### Supported conversions  
+Specification Argument Resolver contains converters for most common java types. 
+
+List of supported conversions:
+
+  * `String -> Enum`
+  * `String -> boolean`
+  * `String -> Boolean`
+  * `String -> integer`
+  * `String -> Integer`
+  * `String -> long`
+  * `String -> Long`
+  * `String -> float`
+  * `String -> Float`
+  * `String -> double`
+  * `String -> Double`
+  * `String -> BigDecimal`
+  * `String -> Date` (default format: `yyyy-MM-dd`)
+  * `String -> LocalDate` (default format: `yyyy-MM-dd`)
+  * `String -> LocalDateTime` (default format: `yyyy-MM-dd'T'HH:mm:ss`)
+  * `String -> OffsetDateTime` (default format: `yyyy-MM-dd'T'HH:mm:ss.SSSXXX`)
+  * `String -> Instant` (default format: `yyyy-MM-dd'T'HH:mm:ss.SSSXXX`)
+  * `String -> UUID` 
+
+To use a custom format for temporal types, add `config="custom-format-value"` to `@Spec` params. 
+For example:
+```
+ @Spec(path="creationDate", spec=LessThan.class, config="dd-MM-yyyy")
+```
+
+
+In case of missing converter, [fallback mechanism](#custom-converters) will be used if one has been configured otherwise `ClassCastException` will be thrown.
+
+##### Custom converters
+The converter includes a fallback mechanism based on [Spring](https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/core/convert/ConversionService.html) `ConversionService`, which is invoked when required conversion is not supported by any default converter. If the `ConversionService` supports required conversion it will be performed, otherwise a `ClassCastException` will be thrown. 
+
+To add specification argument resolver support for custom conversion:
+1) Add required converter to [ConversionService](https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/core/convert/ConversionService.html)
+2) Configure fallback mechanism by passing [ConversionService](https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/core/convert/ConversionService.html) to SpecificationArgumentResolver constructor.
+
+
+For example:
+
+```java
+@Configuration
+@EnableJpaRepositories
+public class MyConfig implements WebMvcConfigurer {
+ 
+    @Autowired
+    ConversionService conversionService;
+    
+    @Override
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
+        argumentResolvers.add(new SpecificationArgumentResolver(conversionService));
+    }
+
+    @Override
+    public void addFormatters(FormatterRegistry registry) {
+        registry.addConverter(new StringToAddressConverter());
+    }
+ 
+    public static class StringToAddressConverter implements Converter<String, Address> {
+        @Override
+        public Address convert(String rawAddress) {
+            Address address = new Address();
+            address.setStreet(rawAddress);
+            return address;
+        }
+    }
+
+    ...
+}
+```
 
 Compatibility notes
 -------------------
@@ -582,7 +901,7 @@ Specification argument resolver is available in the Maven Central:
 <dependency>
     <groupId>net.kaczmarzyk</groupId>
     <artifactId>specification-arg-resolver</artifactId>
-    <version>2.1.1</version>
+    <version>2.6.2</version>
 </dependency>
 ```
 

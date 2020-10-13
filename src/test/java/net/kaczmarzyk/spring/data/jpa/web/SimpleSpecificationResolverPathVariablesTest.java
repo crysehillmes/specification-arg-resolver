@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,17 @@
  */
 package net.kaczmarzyk.spring.data.jpa.web;
 
-import static net.kaczmarzyk.spring.data.jpa.web.annotation.OnTypeMismatch.EXCEPTION;
-import static org.assertj.core.api.Assertions.assertThat;
 
+import net.kaczmarzyk.spring.data.jpa.domain.DateBetween;
+import net.kaczmarzyk.spring.data.jpa.domain.Like;
+import net.kaczmarzyk.spring.data.jpa.web.annotation.Spec;
 import org.junit.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import net.kaczmarzyk.spring.data.jpa.domain.DateBetween;
-import net.kaczmarzyk.spring.data.jpa.domain.Like;
-import net.kaczmarzyk.spring.data.jpa.utils.Converter;
-import net.kaczmarzyk.spring.data.jpa.utils.QueryContext;
-import net.kaczmarzyk.spring.data.jpa.web.annotation.Spec;
-
+import static net.kaczmarzyk.spring.data.jpa.web.annotation.OnTypeMismatch.EXCEPTION;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Tomasz Kaczmarzyk
@@ -42,62 +39,67 @@ public class SimpleSpecificationResolverPathVariablesTest extends ResolverTestBa
     	 MethodParameter param = testMethodParameter("testMethodUsingNotExistingPathVariable");
          MockWebRequest req = new MockWebRequest("/customers/theCustomerIdValue/orders/theOrderIdValue");
 
-         resolver.resolveArgument(param, null, req, null);
+	    WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
+
+	    resolver.buildSpecification(ctx, param.getParameterAnnotation(Spec.class));
     }
 
     @Test
     public void buildsTheSpecUsingPathVariableFromControllerClass() throws Exception {
         MethodParameter param = testMethodParameter("testMethodUsingPathVariableFromClass");
         MockWebRequest req = new MockWebRequest("/customers/theCustomerIdValue/orders/theOrderIdValue");
-        QueryContext queryCtx = new WebRequestQueryContext(req);
 
-        Specification<?> resolved = resolver.resolveArgument(param, null, req, null);
+	    WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
 
-        assertThat(resolved).isEqualTo(new Like<>(queryCtx, "thePath", new String[] { "theCustomerIdValue" }));
+	    Specification<?> resolved = resolver.buildSpecification(ctx, param.getParameterAnnotation(Spec.class));
+
+        assertThat(resolved).isEqualTo(new Like<>(ctx.queryContext(), "thePath", new String[] { "theCustomerIdValue" }));
     }
-    
+
     @Test
     public void buildsTheSpecUsingPathVariableFromControllerMethod() throws Exception {
         MethodParameter param = testMethodParameter("testMethodUsingPathVariableFromMethod");
         MockWebRequest req = new MockWebRequest("/customers/theCustomerIdValue/orders/theOrderIdValue");
-        QueryContext queryCtx = new WebRequestQueryContext(req);
 
-        Specification<?> resolved = resolver.resolveArgument(param, null, req, null);
+	    WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
 
-        assertThat(resolved).isEqualTo(new Like<>(queryCtx, "thePath", new String[] { "theOrderIdValue" }));
+	    Specification<?> resolved = resolver.buildSpecification(ctx, param.getParameterAnnotation(Spec.class));
+
+        assertThat(resolved).isEqualTo(new Like<>(ctx.queryContext(), "thePath", new String[] { "theOrderIdValue" }));
     }
-    
+
     @Test
     public void buildsTheSpecUsingMultiplePathVariables() throws Exception {
         MethodParameter param = testMethodParameter("testMethodUsingMultiplePathVariables");
         MockWebRequest req = new MockWebRequest("/customers/2019-01-25/orders/2019-01-27");
-        QueryContext queryCtx = new WebRequestQueryContext(req);
 
-        Specification<?> resolved = resolver.resolveArgument(param, null, req, null);
+	    WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
 
-        assertThat(resolved).isEqualTo(new DateBetween<>(queryCtx, "thePath", new String[] { "2019-01-25", "2019-01-27" }, Converter.DEFAULT));
+	    Specification<?> resolved = resolver.buildSpecification(ctx, param.getParameterAnnotation(Spec.class));
+
+        assertThat(resolved).isEqualTo(new DateBetween<>(ctx.queryContext(), "thePath", new String[] { "2019-01-25", "2019-01-27" }, defaultConverter));
     }
-    
+
     @RequestMapping(path = "/customers/{customerId}")
     public static class TestController {
 
     	@RequestMapping(path = "/orders/{orderId}")
         public void testMethodUsingPathVariableFromClass(@Spec(path = "thePath", pathVars="customerId", spec = Like.class, onTypeMismatch = EXCEPTION) Specification<Object> spec) {
         }
-    	
+
     	@RequestMapping(path = "/orders/{orderId}")
         public void testMethodUsingPathVariableFromMethod(@Spec(path = "thePath", pathVars="orderId", spec = Like.class, onTypeMismatch = EXCEPTION) Specification<Object> spec) {
         }
-    	
+
     	@RequestMapping(path = "/orders/{orderId}")
         public void testMethodUsingMultiplePathVariables(
         			@Spec(path = "thePath", pathVars={"customerId", "orderId"}, spec = DateBetween.class, onTypeMismatch = EXCEPTION) Specification<Object> spec) {
         }
-    	
+
     	@RequestMapping(path = "/orders/{orderId}")
     	public void testMethodUsingNotExistingPathVariable(
     			@Spec(path = "thePath", pathVars="invoiceId", spec = Like.class, onTypeMismatch = EXCEPTION) Specification<Object> spec) {
-    		
+
     	}
     }
 

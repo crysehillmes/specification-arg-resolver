@@ -3,7 +3,7 @@
 
 	<groupId>org.cryse</groupId>
 	<artifactId>specification-arg-resolver</artifactId>
-	<version>2.1.5-SNAPSHOT</version>
+	<version>2.6.3-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>specification-arg-resolver</name>
@@ -11,6 +11,7 @@
 		This library provides a custom HandlerMethodArgumentResolver that transforms HTTP parameters
 		 into a Specification object ready to use with Spring Data repositories.
 	</description>
+	<url>http://blog.kaczmarzyk.net/2014/03/23/alternative-api-for-filtering-data-with-spring-mvc-and-spring-data/</url>
 	<inceptionYear>2014</inceptionYear>
 	<licenses>
 		<license>
@@ -20,11 +21,25 @@
 	</licenses>
 	<developers>
 		<developer>
-			<name>Cryse Hillmes</name>
+			<name>Tomasz Kaczmarzyk</name>
+			<roles>
+				<role>Lead Developer</role>
+			</roles>
+			<organization>kaczmarzyk.net</organization>
+		</developer>
+		<developer>
+			<name>Jakub Radlica</name>
 			<roles>
 				<role>Developer</role>
 			</roles>
-			<organization>cryse.org</organization>
+			<organization>tratif.com</organization>
+		</developer>
+		<developer>
+			<name>Cryse Hillmess</name>
+			<roles>
+				<role>Developer</role>
+			</roles>
+			<organization>org.cryse</organization>
 		</developer>
 	</developers>
 
@@ -139,7 +154,7 @@
 					<useDefaultExcludes>true</useDefaultExcludes>
 					<useDefaultMapping>true</useDefaultMapping>
 					<properties>
-						<year>${project.inceptionYear}-2019</year>
+						<year>${project.inceptionYear}-2020</year>
 					</properties>
 					<encoding>UTF-8</encoding>
 				</configuration>
@@ -241,11 +256,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

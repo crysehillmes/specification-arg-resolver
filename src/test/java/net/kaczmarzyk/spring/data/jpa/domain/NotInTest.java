@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,18 @@
  */
 package net.kaczmarzyk.spring.data.jpa.domain;
 
-import static net.kaczmarzyk.spring.data.jpa.CustomerBuilder.customer;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.List;
-
-import org.junit.Before;
-import org.junit.Test;
-
 import net.kaczmarzyk.spring.data.jpa.Customer;
 import net.kaczmarzyk.spring.data.jpa.Gender;
 import net.kaczmarzyk.spring.data.jpa.IntegrationTestBase;
 import net.kaczmarzyk.spring.data.jpa.utils.Converter;
 import net.kaczmarzyk.spring.data.jpa.web.annotation.OnTypeMismatch;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.List;
+
+import static net.kaczmarzyk.spring.data.jpa.CustomerBuilder.customer;
+import static org.assertj.core.api.Assertions.assertThat;
 
 
 /**
@@ -137,14 +136,14 @@ public class NotInTest extends IntegrationTestBase {
     @Test
     public void filterByDateWithCustomDateFormat() {
     	NotIn<Customer> notRegistered1stMarch = new NotIn<>(queryCtx, "registrationDate", new String[] { "01-03-2015" },
-    			Converter.withDateFormat("dd-MM-yyyy", OnTypeMismatch.EMPTY_RESULT));
+    			Converter.withDateFormat("dd-MM-yyyy", OnTypeMismatch.EMPTY_RESULT, null));
     	
     	List<Customer> found = customerRepo.findAll(notRegistered1stMarch);
     	
     	assertThat(found).hasSize(2).containsOnly(moeSzyslak, joeQuimby);
     	
     	NotIn<Customer> notRegistered1stNor2ndMarch = new NotIn<>(queryCtx, "registrationDate", new String[] { "01-03-2015", "02-03-2015" },
-    			Converter.withDateFormat("dd-MM-yyyy", OnTypeMismatch.EMPTY_RESULT));
+    			Converter.withDateFormat("dd-MM-yyyy", OnTypeMismatch.EMPTY_RESULT, null));
     	
     	found = customerRepo.findAll(notRegistered1stNor2ndMarch);
     	

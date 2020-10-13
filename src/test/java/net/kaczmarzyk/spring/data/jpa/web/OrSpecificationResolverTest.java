@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,18 @@
  */
 package net.kaczmarzyk.spring.data.jpa.web;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import net.kaczmarzyk.spring.data.jpa.domain.Disjunction;
 import net.kaczmarzyk.spring.data.jpa.domain.Like;
-import net.kaczmarzyk.spring.data.jpa.utils.QueryContext;
 import net.kaczmarzyk.spring.data.jpa.web.annotation.Or;
 import net.kaczmarzyk.spring.data.jpa.web.annotation.Spec;
-
 import org.junit.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.context.request.NativeWebRequest;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
 /**
@@ -35,32 +34,34 @@ import org.springframework.web.context.request.NativeWebRequest;
  */
 public class OrSpecificationResolverTest extends ResolverTestBase {
 
-    OrSpecificationResolver resolver = new OrSpecificationResolver();
+    OrSpecificationResolver resolver = new OrSpecificationResolver(new SimpleSpecificationResolver());
 
     @Test
     public void resolvesWrapperOfInnerSpecs() throws Exception {
         MethodParameter param = MethodParameter.forExecutable(testMethod("testMethod"), 0);
         NativeWebRequest req = mock(NativeWebRequest.class);
-        QueryContext queryCtx = new WebRequestQueryContext(req);
         when(req.getParameterValues("path1")).thenReturn(new String[] { "value1" });
         when(req.getParameterValues("path2")).thenReturn(new String[] { "value2" });
 
-        Specification<?> result = resolver.resolveArgument(param, null, req, null);
+	    WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
 
-        assertThat(result).isEqualTo(new Disjunction<>(new Like<>(queryCtx, "path1", "value1"),
-                new Like<>(queryCtx, "path2", "value2")));
+	    Specification<?> result = resolver.buildSpecification(ctx, param.getParameterAnnotation(Or.class));
+
+        assertThat(result).isEqualTo(new Disjunction<>(new Like<>(ctx.queryContext(), "path1", "value1"),
+                new Like<>(ctx.queryContext(), "path2", "value2")));
     }
 
     @Test
     public void skipsMissingInnerSpec() throws Exception {
         MethodParameter param = MethodParameter.forExecutable(testMethod("testMethod"), 0);
         NativeWebRequest req = mock(NativeWebRequest.class);
-        QueryContext queryCtx = new WebRequestQueryContext(req);
         when(req.getParameterValues("path1")).thenReturn(new String[] { "value1" });
 
-        Specification<?> result = resolver.resolveArgument(param, null, req, null);
+	    WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
 
-        assertThat(result).isEqualTo(new Disjunction<>(new Like<>(queryCtx, "path1", "value1")));
+	    Specification<?> result = resolver.buildSpecification(ctx, param.getParameterAnnotation(Or.class));
+
+        assertThat(result).isEqualTo(new Disjunction<>(new Like<>(ctx.queryContext(), "path1", "value1")));
     }
 
     @Test
@@ -68,7 +69,9 @@ public class OrSpecificationResolverTest extends ResolverTestBase {
         MethodParameter param = MethodParameter.forExecutable(testMethod("testMethod"), 0);
         NativeWebRequest req = mock(NativeWebRequest.class);
 
-        Specification<?> result = resolver.resolveArgument(param, null, req, null);
+	    WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
+
+	    Specification<?> result = resolver.buildSpecification(ctx, param.getParameterAnnotation(Or.class));
 
         assertThat(result).isNull();
     }

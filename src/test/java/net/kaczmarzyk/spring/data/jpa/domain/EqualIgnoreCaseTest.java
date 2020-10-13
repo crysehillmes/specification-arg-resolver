@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,5 +47,16 @@ public class EqualIgnoreCaseTest extends EqualTest {
         assertThat(moeFound).hasSize(1).containsOnly(moeSzyslak);
     }
 
-    
+    @Test
+    public void filtersByEnumCaseInsensitive() {
+        EqualIgnoreCase<Customer> simpsons = new EqualIgnoreCase<>(queryCtx, "gender", new String[] { "fEmAlE" }, defaultConverter);
+        List<Customer> simpsonsFound = customerRepo.findAll(simpsons);
+        assertThat(simpsonsFound).hasSize(1).containsOnly(margeSimpson);
+
+
+        EqualIgnoreCase<Customer> firstName = new EqualIgnoreCase<>(queryCtx, "gender", new String[] { "mAlE" }, defaultConverter);
+        List<Customer> moeFound = customerRepo.findAll(firstName);
+        assertThat(moeFound).hasSize(2).containsOnly(homerSimpson, moeSzyslak);
+    }
+
 }

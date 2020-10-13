@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,16 @@
  */
 package net.kaczmarzyk.spring.data.jpa.web;
 
-import java.lang.reflect.Executable;
-
+import net.kaczmarzyk.spring.data.jpa.utils.Converter;
+import net.kaczmarzyk.spring.data.jpa.web.annotation.OnTypeMismatch;
+import net.kaczmarzyk.utils.ReflectionUtils;
 import org.springframework.core.MethodParameter;
 import org.springframework.data.jpa.domain.Specification;
 
-import net.kaczmarzyk.spring.data.jpa.utils.Converter;
+import java.lang.reflect.Executable;
+import java.util.Collection;
+
+
 
 
 /**
@@ -28,7 +32,7 @@ import net.kaczmarzyk.spring.data.jpa.utils.Converter;
  */
 public abstract class ResolverTestBase {
 
-	protected Converter defaultConverter = Converter.DEFAULT;
+	protected Converter defaultConverter = Converter.withTypeMismatchBehaviour(OnTypeMismatch.EMPTY_RESULT, null);
 	
 	protected MethodParameter testMethodParameter(String methodName) {
         return MethodParameter.forExecutable(testMethod(methodName, Specification.class), 0);
@@ -45,6 +49,26 @@ public abstract class ResolverTestBase {
             throw new RuntimeException(e);
         }
     }
-	
+
+    protected MethodParameter methodParameter(String methodName, Class<?> specClass) {
+		return MethodParameter.forExecutable(
+				testMethod(methodName, specClass), 0
+		);
+    }
+
+	protected Collection<Specification<Object>> innerSpecs(Specification<?> resolvedSpec) {
+		net.kaczmarzyk.spring.data.jpa.domain.Conjunction<Object> resolvedConjunction =
+				ReflectionUtils.get(ReflectionUtils.get(resolvedSpec, "CGLIB$CALLBACK_0"), "val$targetSpec");
+
+		return ReflectionUtils.get(resolvedConjunction, "innerSpecs");
+	}
+
+	protected Collection<Specification<Object>> innerSpecsFromDisjunction(Specification<?> resolvedSpec) {
+		net.kaczmarzyk.spring.data.jpa.domain.Disjunction<Object> resolvedDisjunction =
+				ReflectionUtils.get(ReflectionUtils.get(resolvedSpec, "CGLIB$CALLBACK_0"), "val$targetSpec");
+
+		return ReflectionUtils.get(resolvedDisjunction, "innerSpecs");
+	}
+
 	protected abstract Class<?> controllerClass();
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,25 @@
  */
 package net.kaczmarzyk.spring.data.jpa.web;
 
-import static net.kaczmarzyk.spring.data.jpa.web.annotation.OnTypeMismatch.EXCEPTION;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+
+import net.kaczmarzyk.spring.data.jpa.utils.Converter;
+import net.kaczmarzyk.spring.data.jpa.utils.QueryContext;
+import net.kaczmarzyk.spring.data.jpa.web.annotation.OnTypeMismatch;
+import net.kaczmarzyk.spring.data.jpa.web.annotation.Spec;
+import org.junit.Test;
+import org.springframework.core.MethodParameter;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.web.context.request.NativeWebRequest;
 
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
-import org.junit.Test;
-import org.springframework.core.MethodParameter;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.web.context.request.NativeWebRequest;
-
-import net.kaczmarzyk.spring.data.jpa.utils.Converter;
-import net.kaczmarzyk.spring.data.jpa.utils.QueryContext;
-import net.kaczmarzyk.spring.data.jpa.web.annotation.OnTypeMismatch;
-import net.kaczmarzyk.spring.data.jpa.web.annotation.Spec;
+import static net.kaczmarzyk.spring.data.jpa.web.annotation.OnTypeMismatch.EXCEPTION;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
 /**
@@ -63,7 +63,7 @@ public class SimpleSpecificationResolverSpecConstructorTest extends ResolverTest
 			this.converter = converter;
 		}
 	}
-	
+
 	public static class SpecWithLegacy3ArgConstructor extends DummySpec {
 		String path;
 		String[] args;
@@ -91,7 +91,9 @@ public class SimpleSpecificationResolverSpecConstructorTest extends ResolverTest
 		NativeWebRequest req = mock(NativeWebRequest.class);
 		when(req.getParameterValues("theParameter")).thenReturn(new String[] { "theValue" });
 
-		SpecWith3ArgConstructor resolved = (SpecWith3ArgConstructor) resolver.resolveArgument(param, null, req, null);
+		WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
+
+		SpecWith3ArgConstructor resolved = (SpecWith3ArgConstructor) resolver.buildSpecification(ctx, param.getParameterAnnotation(Spec.class));
 
 		assertThat(resolved.path).isEqualTo("thePath");
 		assertThat(resolved.args).isEqualTo(new String[] { "theValue" });
@@ -103,20 +105,24 @@ public class SimpleSpecificationResolverSpecConstructorTest extends ResolverTest
 		NativeWebRequest req = mock(NativeWebRequest.class);
 		when(req.getParameterValues("theParameter")).thenReturn(new String[] { "theValue" });
 
-		SpecWith4ArgConstructor resolved = (SpecWith4ArgConstructor) resolver.resolveArgument(param, null, req, null);
+		WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
+
+		SpecWith4ArgConstructor resolved = (SpecWith4ArgConstructor) resolver.buildSpecification(ctx, param.getParameterAnnotation(Spec.class));
 
 		assertThat(resolved.path).isEqualTo("thePath");
 		assertThat(resolved.args).isEqualTo(new String[] { "theValue" });
-		assertThat(resolved.converter).isEqualTo(Converter.withTypeMismatchBehaviour(OnTypeMismatch.EXCEPTION));
+		assertThat(resolved.converter).isEqualTo(Converter.withTypeMismatchBehaviour(OnTypeMismatch.EXCEPTION, null));
 	}
-	
+
 	@Test
 	public void resolvesLegacy3ArgsSpec() throws Exception {
 		MethodParameter param = MethodParameter.forExecutable(testMethod("methodWithLegacy3argSpec"), 0);
 		NativeWebRequest req = mock(NativeWebRequest.class);
 		when(req.getParameterValues("theParameter")).thenReturn(new String[] { "theValue" });
 
-		SpecWithLegacy3ArgConstructor resolved = (SpecWithLegacy3ArgConstructor) resolver.resolveArgument(param, null, req, null);
+		WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
+
+		SpecWithLegacy3ArgConstructor resolved = (SpecWithLegacy3ArgConstructor) resolver.buildSpecification(ctx, param.getParameterAnnotation(Spec.class));
 
 		assertThat(resolved.path).isEqualTo("thePath");
 		assertThat(resolved.args).isEqualTo(new String[] { "theValue" });
@@ -129,11 +135,13 @@ public class SimpleSpecificationResolverSpecConstructorTest extends ResolverTest
 		NativeWebRequest req = mock(NativeWebRequest.class);
 		when(req.getParameterValues("theParameter")).thenReturn(new String[] { "theValue" });
 
-		SpecWith5ArgConstructor resolved = (SpecWith5ArgConstructor) resolver.resolveArgument(param, null, req, null);
+		WebRequestProcessingContext ctx = new WebRequestProcessingContext(param, req);
+
+		SpecWith5ArgConstructor resolved = (SpecWith5ArgConstructor) resolver.buildSpecification(ctx, param.getParameterAnnotation(Spec.class));
 
 		assertThat(resolved.path).isEqualTo("thePath");
 		assertThat(resolved.args).isEqualTo(new String[] { "theValue" });
-		assertThat(resolved.converter).isEqualTo(Converter.withDateFormat("yyyyMMdd", OnTypeMismatch.EXCEPTION));
+		assertThat(resolved.converter).isEqualTo(Converter.withDateFormat("yyyyMMdd", OnTypeMismatch.EXCEPTION, null));
 		assertThat(resolved.config).isEqualTo(new String[] { "yyyyMMdd" });
 	}
 
@@ -158,7 +166,7 @@ public class SimpleSpecificationResolverSpecConstructorTest extends ResolverTest
 		public void methodWith4argSpec(
 				@Spec(path = "thePath", params = "theParameter", spec = SpecWith4ArgConstructor.class, onTypeMismatch = EXCEPTION) Specification<Object> spec) {
 		}
-		
+
 		public void methodWithLegacy3argSpec(
 				@Spec(path = "thePath", params = "theParameter", spec = SpecWithLegacy3ArgConstructor.class, config = "yyyyMMdd", onTypeMismatch = EXCEPTION) Specification<Object> spec) {
 		}

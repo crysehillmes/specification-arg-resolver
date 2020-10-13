@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ public class NotEqualE2ETest extends E2eTestBase {
 				.accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$").isArray())
-				.andExpect(jsonPath("$.length()").value(6))
+				.andExpect(jsonPath("$.length()").value(7))
 				.andExpect(jsonPath("$.[?(@.firstName=='Homer')]").doesNotExist());
 	}
 
@@ -94,7 +94,7 @@ public class NotEqualE2ETest extends E2eTestBase {
 				.accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$").isArray())
-				.andExpect(jsonPath("$.length()").value(6))
+				.andExpect(jsonPath("$.length()").value(7))
 				.andExpect(jsonPath("$.[?(@.firstName=='Homer')]").doesNotExist());
 	}
 
@@ -105,7 +105,7 @@ public class NotEqualE2ETest extends E2eTestBase {
 				.accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$").isArray())
-				.andExpect(jsonPath("$.length()").value(6))
+				.andExpect(jsonPath("$.length()").value(7))
 				.andExpect(jsonPath("$.[?(@.firstName=='Maggie')]").doesNotExist());
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,15 @@
  */
 package net.kaczmarzyk.spring.data.jpa;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+import javax.persistence.*;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.persistence.CascadeType;
-import javax.persistence.Embedded;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-
-import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.OffsetDateTime;
+import java.util.*;
 
 
 /**
@@ -67,10 +57,12 @@ public class Customer {
 
     private LocalDate birthDate;
 
+    private String occupation;
+
     private LocalDateTime lastOrderTime;
 
     private Integer weight;
-    
+
     private int weightInt;
     private long weightLong;
     private float weightFloat;
@@ -79,14 +71,19 @@ public class Customer {
     
     private boolean gold;
     private Boolean goldObj;
+    
+    private Instant dateOfNextSpecialOfferInstant;
+    private OffsetDateTime dateOfNextSpecialOffer;
+    
+    private UUID refCode;
 
-    @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private Set<Order> orders;
     
-    @OneToMany(mappedBy = "customer2", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "customer2", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private Set<Order> orders2;
     
-    @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private Set<Badge> badges;
     
     
@@ -151,7 +148,15 @@ public class Customer {
         this.birthDate = birthDate;
     }
 
-    public LocalDateTime getLastOrderTime() {
+	public String getOccupation() {
+		return occupation;
+	}
+
+	public void setOccupation(String occupation) {
+		this.occupation = occupation;
+	}
+
+	public LocalDateTime getLastOrderTime() {
         return lastOrderTime;
     }
 
@@ -180,6 +185,23 @@ public class Customer {
 	public void setGold(boolean gold) {
 		this.gold = gold;
 		this.goldObj = gold;
+	}
+	
+	public OffsetDateTime getDateOfNextSpecialOffer() {
+		return dateOfNextSpecialOffer;
+	}
+	
+	public void setDateOfNextSpecialOffer(OffsetDateTime dateOfNextSpecialOffer) {
+		this.dateOfNextSpecialOffer = dateOfNextSpecialOffer;
+		this.dateOfNextSpecialOfferInstant = dateOfNextSpecialOffer.toInstant();
+	}
+	
+	public UUID getRefCode() {
+		return refCode;
+	}
+	
+	public void setRefCode(UUID refCode) {
+		this.refCode = refCode;
 	}
 	
 	public void setNickName(String nickName) {

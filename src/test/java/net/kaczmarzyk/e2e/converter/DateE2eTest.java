@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2019 the original author or authors.
+ * Copyright 2014-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.kaczmarzyk;
+package net.kaczmarzyk.e2e.converter;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import net.kaczmarzyk.E2eTestBase;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
@@ -104,6 +105,7 @@ public class DateE2eTest extends E2eTestBase {
 			.andExpect(jsonPath("$").isArray())
 			.andExpect(jsonPath("$[0].firstName").value("Lisa"))
 			.andExpect(jsonPath("$[1].firstName").value("Maggie"))
-			.andExpect(jsonPath("$[2]").doesNotExist());
+			.andExpect(jsonPath("$[2].firstName").value("Minnie"))
+			.andExpect(jsonPath("$[3]").doesNotExist());
 	}
 }
