@@ -85,6 +85,7 @@ public class Converter {
 		DEFAULT_DATE_FORMATS.put(LocalDate.class, "yyyy-MM-dd");
 		DEFAULT_DATE_FORMATS.put(LocalDateTime.class, "yyyy-MM-dd\'T\'HH:mm:ss");
 		DEFAULT_DATE_FORMATS.put(OffsetDateTime.class, "yyyy-MM-dd\'T\'HH:mm:ss.SSSXXX");
+		DEFAULT_DATE_FORMATS.put(ZonedDateTime.class, "yyyy-MM-dd\'T\'HH:mm:ss.SSSXXX");
 		DEFAULT_DATE_FORMATS.put(Instant.class, "yyyy-MM-dd\'T\'HH:mm:ss.SSSXXX");
 	}
 
